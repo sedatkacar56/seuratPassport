@@ -8,7 +8,7 @@
 
 ```r
 # Install from GitHub
-remotes::install_github("yourusername/seuratPassport")
+remotes::install_github("sedatkacar56/seuratPassport")
 ```
 
 ---
