@@ -1,5 +1,5 @@
 Package: seuratPassport
-Title: Passport System for Seurat Objects
+Title: Passport System for Single-Cell Objects
 Version: 0.99.0
 Authors@R:
     person("Sedat", "Kacar",
@@ -7,12 +7,15 @@ Authors@R:
            role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-0671-8529"))
 Description:
-    Stamps Seurat objects with a persistent metadata passport stored in
-    the misc slot. Tracks animal info, experiment details, lineage (parent/child
-    relationships), RDS registry numbers, processing logs, and custom fields.
-    Includes an interactive Shiny gadget to fill and update the passport,
-    and a read mode to print the full passport to console.
-    The passport persists inside the RDS file with no external files needed.
+    Stamps Seurat, SingleCellExperiment, and SummarizedExperiment objects
+    with a persistent metadata passport. For Seurat objects the passport is
+    stored in the misc slot; for SingleCellExperiment and SummarizedExperiment
+    objects it is stored in the metadata slot. Tracks animal info, experiment
+    details, lineage (parent/child relationships), RDS registry numbers,
+    processing logs, and custom fields. Includes an interactive Shiny gadget
+    to fill and update the passport, and a read mode to print the full passport
+    to console. The passport persists inside the RDS file with no external
+    files needed.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -23,11 +26,14 @@ Depends:
 Imports:
     shiny,
     miniUI,
-    Rcpp
+    Rcpp,
+    S4Vectors
 LinkingTo:
     Rcpp
 Suggests:
     Seurat,
+    SingleCellExperiment,
+    SummarizedExperiment,
     BiocStyle,
     knitr,
     rmarkdown,

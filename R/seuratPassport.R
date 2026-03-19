@@ -1,32 +1,36 @@
-#' Stamp a Seurat Object with a Passport
+#' Stamp a Seurat, SingleCellExperiment, or SummarizedExperiment Object with a Passport
 #'
 #' @description
 #' Opens an interactive Shiny popup that allows you to fill in metadata
 #' (animal info, experiment details, lineage, RDS numbers, and custom fields)
-#' and stamps it directly into the Seurat object's \code{@misc$passport} slot.
+#' and stamps it directly into the object's passport slot.
+#' For Seurat objects the passport is stored in \code{@misc$passport};
+#' for \code{SingleCellExperiment} and \code{SummarizedExperiment} objects it
+#' is stored in \code{metadata(obj)$passport}.
 #' All information persists inside the object when saved as \code{.rds}.
 #'
 #' If a passport already exists in the object, all previously filled fields
 #' are pre-loaded into the popup so you only need to update what changed.
 #'
-#' @param seurat_obj A Seurat object to stamp. Must not be NULL.
-#' @param parent A parent Seurat object that this object was subset from.
-#'   If provided, \code{parent_id} and \code{lineage} are automatically
+#' @param obj A Seurat, SingleCellExperiment, or SummarizedExperiment object
+#'   to stamp. Must not be NULL.
+#' @param parent A parent object of the same class that this object was subset
+#'   from. If provided, \code{parent_id} and \code{lineage} are automatically
 #'   populated from the parent's passport — no typing needed.
 #'   Default is \code{NULL} (root object).
 #' @param read Logical. If \code{TRUE}, prints the existing passport to the
 #'   console instead of opening the popup. Default is \code{FALSE}.
 #'
-#' @return The same Seurat object with \code{@misc$passport} filled in.
+#' @return The same object with its passport slot filled in.
 #'   If cancelled or an error occurs, the original object is returned unchanged
 #'   — it will never return \code{NULL}.
 #'
 #' @details
-#' The passport stored in \code{@misc$passport} contains the following fields:
+#' The passport contains the following fields:
 #'
 #' \strong{Identity:}
 #' \itemize{
-#'   \item \code{object_id}  — Name/ID of this Seurat object (e.g. "WTHeme")
+#'   \item \code{object_id}  — Name/ID of this object (e.g. "WTHeme")
 #'   \item \code{rds_self}   — RDS registry number of this object (e.g. 224)
 #'   \item \code{created}    — Timestamp of when passport was stamped
 #' }
@@ -67,7 +71,13 @@
 #' Cancelling the popup or any error returns the original object unchanged.
 #'
 #' @examples
-#' \dontrun{
+#' # Read passport on an unstamped object (prints "No passport found")
+#' if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+#'     se <- SummarizedExperiment::SummarizedExperiment()
+#'     seuratPassport(se, read = TRUE)
+#' }
+#'
+#' \donttest{
 #' # --- Stamp a root object (no parent) ---
 #' WTHeme <- seuratPassport (WTHeme)
 #'
@@ -88,14 +98,14 @@
 #' @importFrom miniUI miniPage gadgetTitleBar miniContentPanel
 #'
 #' @export
-seuratPassport  <- function(seurat_obj, parent = NULL, read = FALSE) {
+seuratPassport  <- function(obj, parent = NULL, read = FALSE) {
 
   # Safety check
-  if (is.null(seurat_obj)) {
-    stop("seurat_obj cannot be NULL. Please reload your object first.")
+  if (is.null(obj)) {
+    stop("obj cannot be NULL. Please reload your object first.")
   }
 
-  p        <- seurat_obj@misc$passport
+  p        <- .get_passport(obj)
   existing <- function(field) if (!is.null(p[[field]])) p[[field]] else ""
 
   known <- c("object_id", "rds_self", "created",
@@ -109,7 +119,7 @@ seuratPassport  <- function(seurat_obj, parent = NULL, read = FALSE) {
 
   # ---- READ MODE ----
   if (read) {
-    read_passport(seurat_obj)
+    read_passport(obj)
     return(invisible())
   }
 
@@ -210,11 +220,13 @@ seuratPassport  <- function(seurat_obj, parent = NULL, read = FALSE) {
         if (nchar(k) > 0 && nchar(v) > 0) { ckeys <- c(ckeys, k); cvals <- c(cvals, v) }
       }
 
-      parent_id_val <- if (!is.null(parent)) parent@misc$passport$object_id
+      parent_passport <- if (!is.null(parent)) .get_passport(parent) else NULL
+
+      parent_id_val <- if (!is.null(parent_passport)) parent_passport$object_id
                        else if (nchar(trimws(input$parent_id)) > 0) trimws(input$parent_id)
                        else "root"
 
-      lineage_val <- if (!is.null(parent)) c(parent@misc$passport$lineage, parent@misc$passport$object_id)
+      lineage_val <- if (!is.null(parent_passport)) c(parent_passport$lineage, parent_passport$object_id)
                      else if (nchar(trimws(input$parent_id)) > 0) c(p$lineage, trimws(input$parent_id))
                      else character(0)
 
@@ -248,13 +260,12 @@ seuratPassport  <- function(seurat_obj, parent = NULL, read = FALSE) {
         custom_vals  = cvals
       )
 
-      seurat_obj@misc$passport <- passport
-      shiny::stopApp(seurat_obj)
+      shiny::stopApp(.set_passport(obj, passport))
     })
 
     shiny::observeEvent(input$cancel, {
       message("Cancelled — original object returned unchanged")
-      shiny::stopApp(seurat_obj)
+      shiny::stopApp(obj)
     })
   }
 
@@ -264,13 +275,13 @@ seuratPassport  <- function(seurat_obj, parent = NULL, read = FALSE) {
                      viewer = shiny::dialogViewer("Seurat Passport", width = 600, height = 850)),
     error = function(e) {
       message("Gadget error: ", e$message, " — original object returned unchanged")
-      return(seurat_obj)
+      return(obj)
     }
   )
 
   if (is.null(result)) {
     message("Returned NULL — original object returned unchanged")
-    return(seurat_obj)
+    return(obj)
   }
 
   return(result)

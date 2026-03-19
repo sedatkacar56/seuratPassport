@@ -1,16 +1,24 @@
-#' Read the Passport of a Seurat Object
+#' Read the Passport of a Seurat, SingleCellExperiment, or SummarizedExperiment Object
 #'
 #' @description
-#' Prints the full passport stored in \code{@misc$passport} to the console,
+#' Prints the full passport stored in the object's passport slot to the console,
 #' including all known fields, any custom fields, and the processing log.
+#' Works with Seurat (\code{@misc$passport}), SingleCellExperiment, and
+#' SummarizedExperiment (\code{metadata(obj)$passport}) objects.
 #'
-#' @param seurat_obj A Seurat object with a passport stamped via
-#'   \code{\link{seuratPassport}}.
+#' @param obj A Seurat, SingleCellExperiment, or SummarizedExperiment object
+#'   with a passport stamped via \code{\link{seuratPassport}}.
 #'
 #' @return Invisibly returns \code{NULL}. Output is printed to console.
 #'
 #' @examples
-#' \dontrun{
+#' # Read passport on an unstamped object (prints "No passport found")
+#' if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+#'     se <- SummarizedExperiment::SummarizedExperiment()
+#'     read_passport(se)
+#' }
+#'
+#' \donttest{
 #' read_passport(WTHeme)
 #'
 #' # Or via seuratPassport with read = TRUE:
@@ -20,9 +28,9 @@
 #' @seealso \code{\link{seuratPassport}}, \code{\link{log_step}}
 #'
 #' @export
-read_passport <- function(seurat_obj) {
+read_passport <- function(obj) {
 
-  p <- seurat_obj@misc$passport
+  p <- .get_passport(obj)
 
   if (is.null(p)) {
     message("No passport found. Use seuratPassport() to create one.")
@@ -77,11 +85,12 @@ read_passport <- function(seurat_obj) {
   }
 
   log_lines <- c("======= PROCESSING LOG =======")
-  if (length(seurat_obj@misc$processing_log) == 0) {
+  processing_log <- .get_processing_log(obj)
+  if (length(processing_log) == 0) {
     log_lines <- c(log_lines, "No processing steps logged yet.")
   } else {
-    for (i in seq_along(seurat_obj@misc$processing_log)) {
-        entry <- seurat_obj@misc$processing_log[[i]]
+    for (i in seq_along(processing_log)) {
+        entry <- processing_log[[i]]
         log_lines <- c(log_lines,
             sprintf("[%d] %-25s | %s cells | %s",
                 i, entry$step, entry$n_cells, entry$time))
