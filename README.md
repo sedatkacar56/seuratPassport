@@ -1,6 +1,6 @@
 # seuratPassport 🧬
 
-> A passport system for Seurat objects. Stamp your single-cell data with full metadata, lineage tracking, and processing logs — all stored inside the `.rds` file itself.
+> A passport system for single-cell objects. Stamp your Seurat, SingleCellExperiment, or SummarizedExperiment data with full metadata, lineage tracking, and processing logs — all stored inside the `.rds` file itself.
 
 ---
 
@@ -15,7 +15,13 @@ remotes::install_github("sedatkacar56/seuratPassport")
 
 ## What It Does
 
-Every Seurat object gets a **passport** stored in `@misc$passport` that travels with the object forever:
+Every object gets a **passport** that travels with it forever:
+
+| Object Type | Passport Location | Processing Log Location |
+|---|---|---|
+| Seurat | `@misc$passport` | `@misc$processing_log` |
+| SingleCellExperiment | `metadata(obj)$passport` | `metadata(obj)$processing_log` |
+| SummarizedExperiment | `metadata(obj)$passport` | `metadata(obj)$processing_log` |
 
 | Section | Fields |
 |---|---|
@@ -30,26 +36,53 @@ Every Seurat object gets a **passport** stored in `@misc$passport` that travels 
 
 ## Quick Start
 
+### Seurat
+
 ```r
 library(seuratPassport)
 
-# 1. Stamp your root object — popup opens, fill the form
-WTHeme <- stamp_seurat_interactive(WTHeme)
+# Stamp your object — popup opens, fill the form
+WTHeme <- seuratPassport(WTHeme)
 
-# 2. Log processing steps
+# Log processing steps
 WTHeme <- NormalizeData(WTHeme)
 WTHeme <- log_step(WTHeme, "NormalizeData",
            params = list(method = "LogNormalize"))
 
-WTHeme <- RunPCA(WTHeme)
-WTHeme <- log_step(WTHeme, "RunPCA", params = list(npcs = 30))
-
-# 3. Subset and stamp child — parent linked automatically
+# Stamp a child subset — parent linked automatically
 EndofrHeme <- subset(WTHeme, subset = cell_type == "Endothelial")
-EndofrHeme <- stamp_seurat_interactive(EndofrHeme, parent = WTHeme)
+EndofrHeme <- seuratPassport(EndofrHeme, parent = WTHeme)
 
-# 4. Read passport anytime
+# Read passport anytime
 read_passport(EndofrHeme)
+```
+
+### SingleCellExperiment
+
+```r
+library(seuratPassport)
+library(SingleCellExperiment)
+
+sce <- SingleCellExperiment(assays = list(counts = count_matrix))
+
+# Same functions — passport goes into metadata(sce)$passport
+sce <- seuratPassport(sce)
+sce <- log_step(sce, "scran normalization")
+read_passport(sce)
+```
+
+### SummarizedExperiment
+
+```r
+library(seuratPassport)
+library(SummarizedExperiment)
+
+se <- SummarizedExperiment(assays = list(counts = count_matrix))
+
+# Same functions — passport goes into metadata(se)$passport
+se <- seuratPassport(se)
+se <- log_step(se, "DESeq2 normalization")
+read_passport(se)
 ```
 
 ---
@@ -95,16 +128,18 @@ ILMN_name      : ILMN_5564
 
 | Function | Description |
 |---|---|
-| `stamp_seurat_interactive(obj)` | Open popup to fill/update passport |
-| `stamp_seurat_interactive(obj, parent = WTHeme)` | Stamp child, auto-link to parent |
-| `stamp_seurat_interactive(obj, read = TRUE)` | Print passport to console |
+| `seuratPassport(obj)` | Open popup to fill/update passport |
+| `seuratPassport(obj, parent = WTHeme)` | Stamp child, auto-link to parent |
+| `seuratPassport(obj, read = TRUE)` | Print passport to console |
 | `read_passport(obj)` | Print passport to console |
 | `log_step(obj, "step name", params = list(...))` | Log a processing step |
+
+Works with **Seurat**, **SingleCellExperiment**, and **SummarizedExperiment** objects.
 
 ---
 
 ## Author
 
-**Sedat Kacar**  
-Pulmonary Post Doc — Indiana University  
+**Sedat Kacar**
+Pulmonary Post Doc — Indiana University
 *Praise be to Allah (SWT)*
