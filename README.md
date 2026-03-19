@@ -1,0 +1,110 @@
+# seuratPassport 🧬
+
+> A passport system for Seurat objects. Stamp your single-cell data with full metadata, lineage tracking, and processing logs — all stored inside the `.rds` file itself.
+
+---
+
+## Installation
+
+```r
+# Install from GitHub
+remotes::install_github("yourusername/seuratPassport")
+```
+
+---
+
+## What It Does
+
+Every Seurat object gets a **passport** stored in `@misc$passport` that travels with the object forever:
+
+| Section | Fields |
+|---|---|
+| Identity | object_id, rds_self (RDS number), created |
+| Animal | animal_id, species, sex, age, condition, tissue |
+| Experiment | project, researcher, date, notes |
+| Lineage | parent_id, rds_parent, lineage chain, children, rds_children |
+| Custom | anything you want to add |
+| Processing Log | every step logged with cell count + timestamp |
+
+---
+
+## Quick Start
+
+```r
+library(seuratPassport)
+
+# 1. Stamp your root object — popup opens, fill the form
+WTHeme <- stamp_seurat_interactive(WTHeme)
+
+# 2. Log processing steps
+WTHeme <- NormalizeData(WTHeme)
+WTHeme <- log_step(WTHeme, "NormalizeData",
+           params = list(method = "LogNormalize"))
+
+WTHeme <- RunPCA(WTHeme)
+WTHeme <- log_step(WTHeme, "RunPCA", params = list(npcs = 30))
+
+# 3. Subset and stamp child — parent linked automatically
+EndofrHeme <- subset(WTHeme, subset = cell_type == "Endothelial")
+EndofrHeme <- stamp_seurat_interactive(EndofrHeme, parent = WTHeme)
+
+# 4. Read passport anytime
+read_passport(EndofrHeme)
+```
+
+---
+
+## Output of `read_passport()`
+
+```
+========== PASSPORT ==========
+Object ID  : EndofrHeme
+RDS Self   : 225
+Created    : 2026-03-09 10:34:12
+-------- Animal --------
+Animal ID  : M01
+Species    : Rattus norvegicus
+Sex        : male
+Age        : P60
+Condition  : Heme
+Tissue     : Lung - Endothelial
+-------- Experiment --------
+Project    : HEME rat PROJECT
+Researcher : Sedat
+Date       : 2026-03-09
+Notes      : rpca integrated, subset from WTHeme
+-------- Lineage --------
+Parent     : WTHeme
+RDS Parent : 224
+Chain      : WTHeme
+Children   : gCapC, gCapB, gCapD
+RDS Children: 226, 227, 228
+-------- Custom Fields --------
+integration_type: rpca
+ILMN_name      : ILMN_5564
+======= PROCESSING LOG =======
+[1] NormalizeData             | 54184 cells | 2026-03-09 ...
+[2] RunPCA                    | 54184 cells | 2026-03-09 ...
+[3] Subset Endothelial        | 12453 cells | 2026-03-09 ...
+==============================
+```
+
+---
+
+## Functions
+
+| Function | Description |
+|---|---|
+| `stamp_seurat_interactive(obj)` | Open popup to fill/update passport |
+| `stamp_seurat_interactive(obj, parent = WTHeme)` | Stamp child, auto-link to parent |
+| `stamp_seurat_interactive(obj, read = TRUE)` | Print passport to console |
+| `read_passport(obj)` | Print passport to console |
+| `log_step(obj, "step name", params = list(...))` | Log a processing step |
+
+---
+
+## Author
+
+**Sedat Kacar**  
+Pulmonary Post Doc — Indiana University  
+*Praise be to Allah (SWT)*

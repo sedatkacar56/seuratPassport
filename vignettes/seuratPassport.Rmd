@@ -1,0 +1,221 @@
+---
+title: "Getting Started with seuratPassport"
+author:
+  - name: Sedat Kacar
+    affiliation: Indiana University
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Getting Started with seuratPassport}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  eval      = FALSE
+)
+```
+
+# Introduction
+
+`seuratPassport` solves a common problem in single-cell RNA-seq analysis:
+**Seurat objects accumulate complex processing histories, but that context
+disappears once collaborators open the `.rds` file.**
+
+This package embeds a persistent metadata *passport* directly inside
+`@misc$passport` of every Seurat object. Because the passport travels inside
+the `.rds` file, there are no external spreadsheets to lose track of.
+
+The package provides three functions:
+
+| Function | Purpose |
+|---|---|
+| `seuratPassport()` | Open the Shiny popup to fill or update a passport |
+| `read_passport()` | Print the full passport and processing log to console |
+| `log_step()` | Append a processing step to the object's log |
+
+# Installation
+
+```{r install, eval=FALSE}
+# From Bioconductor (once accepted):
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("seuratPassport")
+
+# Development version from GitHub:
+# devtools::install_github("sedatkacar56/seuratPassport")
+```
+
+# Quick Start
+
+## Stamping a root object
+
+Call `seuratPassport()` on any Seurat object. An interactive Shiny popup
+opens in your RStudio Viewer. Fill in the fields and click **Done**.
+
+```{r stamp-root}
+library(seuratPassport)
+
+# WTHeme is your Seurat object
+WTHeme <- seuratPassport(WTHeme)
+```
+
+The passport is now stored in `WTHeme@misc$passport` and will persist
+whenever you `saveRDS(WTHeme, "WTHeme.rds")`.
+
+## Stamping a child object (subsetting workflow)
+
+When you subset an object, pass the parent so the lineage is filled
+automatically — no typing needed.
+
+```{r stamp-child}
+# Subset endothelial cells from WTHeme
+EndofrHeme <- subset(WTHeme, idents = "Endothelial")
+
+# parent = WTHeme fills parent_id and lineage automatically
+EndofrHeme <- seuratPassport(EndofrHeme, parent = WTHeme)
+```
+
+`EndofrHeme@misc$passport$lineage` will now contain the full ancestry chain
+back to the root object.
+
+## Reading a passport
+
+```{r read}
+# Print to console
+read_passport(WTHeme)
+
+# Or via the main function with read = TRUE
+seuratPassport(WTHeme, read = TRUE)
+```
+
+Example output:
+
+```
+========== PASSPORT ==========
+Object ID  : WTHeme
+RDS Self   : 224
+Created    : 2026-03-19 05:00:00
+-------- Animal --------
+Animal ID  : M01
+Species    : Mus musculus
+Sex        : male
+Age        : P60
+Condition  : control
+Tissue     : lung
+-------- Experiment --------
+Project    : memory_study
+Researcher : Sedat Kacar
+Date       : 2026-03-19
+Notes      : First sequencing run
+-------- Lineage --------
+Parent     : root
+RDS Parent : root
+Chain      : root
+Children   : EndofrHeme224, gCapC
+RDS Children: 225, 226
+======= PROCESSING LOG =======
+No processing steps logged yet.
+==============================
+```
+
+# Logging Processing Steps
+
+Use `log_step()` after each major processing step. This creates an auditable
+record of what was done to the object, with timestamps and cell counts.
+
+```{r log}
+library(Seurat)
+
+WTHeme <- NormalizeData(WTHeme)
+WTHeme <- log_step(WTHeme, "NormalizeData",
+                   params = list(method = "LogNormalize",
+                                 scale_factor = 10000))
+
+WTHeme <- FindVariableFeatures(WTHeme)
+WTHeme <- log_step(WTHeme, "FindVariableFeatures",
+                   params = list(nfeatures = 2000))
+
+WTHeme <- ScaleData(WTHeme)
+WTHeme <- log_step(WTHeme, "ScaleData")
+
+WTHeme <- RunPCA(WTHeme, npcs = 30)
+WTHeme <- log_step(WTHeme, "RunPCA", params = list(npcs = 30))
+```
+
+The processing log is visible at the bottom of `read_passport()` output:
+
+```
+======= PROCESSING LOG =======
+[1] NormalizeData             | 8423 cells | 2026-03-19 05:01:00
+[2] FindVariableFeatures      | 8423 cells | 2026-03-19 05:01:05
+[3] ScaleData                 | 8423 cells | 2026-03-19 05:01:20
+[4] RunPCA                    | 8423 cells | 2026-03-19 05:01:45
+==============================
+```
+
+# Custom Fields
+
+The Shiny popup includes a **Custom Fields** section where you can add
+any extra key-value pairs. These are stored alongside the standard fields
+and printed by `read_passport()`.
+
+For example, you might add:
+- `sequencing_platform = 10x Chromium v3`
+- `genome_build = mm10`
+- `batch = batch_01`
+
+Custom fields from a previous passport are automatically pre-loaded when
+you re-open the popup, so you only update what changed.
+
+# Passport Fields Reference
+
+## Identity
+
+| Field | Description | Example |
+|---|---|---|
+| `object_id` | Name/ID of this object | `"WTHeme"` |
+| `rds_self` | RDS registry number | `"224"` |
+| `created` | Timestamp of stamping | auto-filled |
+
+## Animal Info
+
+| Field | Description | Example |
+|---|---|---|
+| `animal_id` | Individual animal ID | `"M01"` |
+| `species` | Species | `"Mus musculus"` |
+| `sex` | Sex | `"male"` |
+| `age` | Age | `"P60"` |
+| `condition` | Experimental condition | `"control"` |
+| `tissue` | Tissue of origin | `"lung"` |
+
+## Experiment Info
+
+| Field | Description | Example |
+|---|---|---|
+| `project` | Project name | `"memory_study"` |
+| `researcher` | Researcher name | `"Sedat Kacar"` |
+| `date` | Experiment date | `"2026-03-19"` |
+| `notes` | Free-text notes | any string |
+
+## Lineage
+
+| Field | Description |
+|---|---|
+| `parent_id` | Object ID of the direct parent (or `"root"`) |
+| `rds_parent` | RDS number of the parent (or `"root"`) |
+| `lineage` | Full ancestry chain as a character vector |
+| `children` | Object IDs of children subset from this object |
+| `rds_children` | RDS numbers of children |
+
+# Session Info
+
+```{r session}
+sessionInfo()
+```

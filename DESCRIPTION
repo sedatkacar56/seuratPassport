@@ -1,0 +1,38 @@
+Package: seuratPassport
+Title: Passport System for Seurat Objects
+Version: 0.99.0
+Authors@R:
+    person("Sedat", "Kacar",
+           email = "sedatkacar56@gmail.com",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-0671-8529"))
+Description:
+    Stamps Seurat objects with a persistent metadata passport stored in
+    the misc slot. Tracks animal info, experiment details, lineage (parent/child
+    relationships), RDS registry numbers, processing logs, and custom fields.
+    Includes an interactive Shiny gadget to fill and update the passport,
+    and a read mode to print the full passport to console.
+    The passport persists inside the RDS file with no external files needed.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+biocViews: SingleCell, DataImport, Visualization, Infrastructure
+Depends:
+    R (>= 4.3)
+Imports:
+    shiny,
+    miniUI,
+    Rcpp
+LinkingTo:
+    Rcpp
+Suggests:
+    Seurat,
+    BiocStyle,
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+BugReports: https://github.com/sedatkacar56/seuratPassport/issues
+URL: https://github.com/sedatkacar56/seuratPassport

@@ -1,0 +1,10 @@
+citHeader("To cite seuratPassport in publications use:")
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "seuratPassport: Passport System for Seurat Objects",
+  author   = person("Sedat", "Kacar"),
+  year     = format(Sys.Date(), "%Y"),
+  note     = "R package version 0.99.0",
+  url      = "https://github.com/sedatkacar56/seuratPassport"
+)
